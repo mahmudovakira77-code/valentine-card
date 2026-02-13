@@ -1,162 +1,138 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Galactic Heart Animation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Heart</title>
 <style>
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: #111;
-  font-family: Arial, sans-serif;
-}
-
-#message {
-  position: absolute;
-  top: 50%;
-  width: 100%;
-  text-align: center;
-  font-size: 40px;
-  color: #ffb6c1;
-  opacity: 0;
-  transform: translateY(-50%);
-  letter-spacing: 2px;
-}
-
-canvas {
-  display: block;
-}
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    canvas {
+        display: block;
+    }
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
-<div id="message">С Днём Святого Валентина!</div>
-
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let centerX = canvas.width / 2;
-let centerY = canvas.height / 2;
-let pulseTime = 0;
+const particles = [];
+const particleCount = 180; 
+const connectionDistance = 120;
 
-const settings = {
-  numParticles: 5000,
-  pulseSpeed: 0.05,
-  scaleFactor: 15,
-  colorStart: [255,255,255],
-  colorEnd: [255,182,193],
-  sparkleChance: 0.05,
-  text: "С Днём Святого Валентина!",
-  textColor: "#ffb6c1"
-};
 
-let heartPoints = [];
-let particles = [];
-let trails = [];
-
-// Генерация точек сердца
-function generateHeartShape() {
-  heartPoints = [];
-  const pulse = 1 + Math.sin(pulseTime) * 0.05;
-  const scale = settings.scaleFactor * pulse;
-  const steps = Math.max(40, settings.numParticles);
-
-  for (let i = 0; i < steps; i++) {
-    const t = (i / steps) * Math.PI * 2;
-    const x = centerX + scale * 16 * Math.pow(Math.sin(t), 3);
-    const y = centerY - scale * (13 * Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t));
-    heartPoints.push({x, y});
-  }
+function getHeartPoint(t, scale = 15) {
+    const x = scale * 16 * Math.pow(Math.sin(t), 3);
+    const y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    return { x, y };
 }
 
-// Создаем частицы
-function initParticles() {
-  particles = [];
-  trails = [];
-  for(let i = 0; i < heartPoints.length; i++) {
-    const p = heartPoints[i];
-    particles.push({
-      x: p.x,
-      y: p.y,
-      size: Math.random()*2 + 1,
-      color: settings.colorStart.slice(),
-      sparkle: Math.random() < settings.sparkleChance
-    });
-    trails.push([]);
-  }
+class Particle {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        const t = Math.random() * Math.PI * 2;
+        const heartPoint = getHeartPoint(t);
+
+        const spread = 30;
+        this.targetX = canvas.width / 2 + heartPoint.x + (Math.random() - 0.5) * spread;
+        this.targetY = canvas.height / 2 + heartPoint.y + (Math.random() - 0.5) * spread;
+
+        this.x = this.targetX + (Math.random() - 0.5) * 200;
+        this.y = this.targetY + (Math.random() - 0.5) * 200;
+        this.vx = 0;
+        this.vy = 0;
+        this.life = 1;
+        this.size = 2 + Math.random() * 2; 
+        this.glow = 4 + Math.random() * 2; 
+    }
+
+    update() {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+
+        this.vx += dx * 0.00055; 
+        this.vy += dy * 0.00055;
+
+        this.vx *= 0.94;
+        this.vy *= 0.94;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.life -= 0.002;
+        if (this.life <= 0) this.reset();
+    }
+
+    draw() {
+        ctx.fillStyle = `rgba(0, 200, 255, ${this.life * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(0, 200, 255, ${this.life * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.glow, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
-// Функция для плавного перехода цветов
-function lerpColor(c1, c2, t) {
-  return c1.map((v,i) => v + (c2[i]-v)*t);
+for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            if (distance < connectionDistance) {
+                const opacity = (1 - distance / connectionDistance) * 0.4 * Math.min(particles[i].life, particles[j].life);
+                ctx.strokeStyle = `rgba(0, 200, 255, ${opacity})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x, particles[i].y);
+                ctx.lineTo(particles[j].x, particles[j].y);
+                ctx.stroke();
+            }
+        }
+    }
 }
 
-// Основная анимация
 function animate() {
-  pulseTime += settings.pulseSpeed;
-  generateHeartShape();
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
 
-  ctx.fillStyle = "rgba(17,17,17,0.25)";
-  ctx.fillRect(0,0,canvas.width, canvas.height);
+    drawConnections();
 
-  particles.forEach((p, i) => {
-    const target = heartPoints[i % heartPoints.length];
-    const dx = target.x - p.x;
-    const dy = target.y - p.y;
-    p.x += dx * 0.1;
-    p.y += dy * 0.1;
-
-    // Перелив цвета
-    const t = (Math.sin(pulseTime + i/100) + 1)/2;
-    const c = lerpColor(settings.colorStart, settings.colorEnd, t);
-    const colorStr = `rgb(${Math.floor(c[0])},${Math.floor(c[1])},${Math.floor(c[2])})`;
-    p.color = colorStr;
-
-    // Добавляем следы
-    trails[i].push({x: p.x, y: p.y, size: p.size, color: p.color, sparkle: p.sparkle});
-    if(trails[i].length > 10) trails[i].shift();
-
-    trails[i].forEach((t,j)=>{
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, t.size*(j/10), 0, Math.PI*2);
-      ctx.fillStyle = t.color;
-      ctx.globalAlpha = t.sparkle ? Math.random() : 1;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+    particles.forEach(p => {
+        p.update();
+        p.draw();
     });
 
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-    ctx.fillStyle = p.color;
-    ctx.fill();
-  });
-
-  requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 }
-
-// Инициализация
-generateHeartShape();
-initParticles();
-
-// Появление текста
-const msg = document.getElementById('message');
-setTimeout(() => {
-  msg.style.opacity = 1;
-}, 1000);
-
-// Ресайз
-window.addEventListener('resize', ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  centerX = canvas.width / 2;
-  centerY = canvas.height / 2;
-});
 
 animate();
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
 </script>
 </body>
 </html>
+
