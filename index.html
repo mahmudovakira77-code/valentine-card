@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>For You ❤️</title>
+
+<style>
+body{
+    margin:0;
+    background:black;
+    color:white;
+    font-family:Arial, Helvetica, sans-serif;
+    overflow:hidden;
+    text-align:center;
+}
+
+/* Центр */
+.center{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+}
+
+/* Кнопка */
+button{
+    padding:15px 30px;
+    font-size:18px;
+    border:none;
+    border-radius:30px;
+    background:#ff4d6d;
+    color:white;
+    cursor:pointer;
+    transition:0.3s;
+}
+button:hover{
+    transform:scale(1.1);
+    background:#ff1e4d;
+}
+
+/* Текст печатается */
+.typing{
+    font-size:26px;
+    white-space:nowrap;
+    border-right:3px solid white;
+    overflow:hidden;
+    width:0;
+    animation:typing 4s steps(40,end) forwards, blink .7s infinite;
+}
+
+@keyframes typing{
+    from{width:0}
+    to{width:100%}
+}
+@keyframes blink{
+    50%{border-color:transparent}
+}
+
+/* Сердце */
+.heart{
+    position:absolute;
+    width:120px;
+    height:120px;
+    background:#ff2e63;
+    transform:rotate(45deg);
+    animation:beat 1s infinite;
+}
+.heart:before,
+.heart:after{
+    content:"";
+    position:absolute;
+    width:120px;
+    height:120px;
+    background:#ff2e63;
+    border-radius:50%;
+}
+.heart:before{top:-60px;}
+.heart:after{left:-60px;}
+
+@keyframes beat{
+    0%{transform:scale(1) rotate(45deg);}
+    50%{transform:scale(1.2) rotate(45deg);}
+    100%{transform:scale(1) rotate(45deg);}
+}
+
+/* дождь сердечек */
+.fall{
+    position:absolute;
+    color:#ff4d6d;
+    font-size:20px;
+    animation:fall linear forwards;
+}
+@keyframes fall{
+    to{transform:translateY(100vh); opacity:0;}
+}
+</style>
+</head>
+
+<body>
+
+<div id="screen1" class="center">
+    <h2>Нажми если тебе интересно</h2>
+    <button onclick="start()">Нажать</button>
+</div>
+
+<div id="screen2" class="center" style="display:none;">
+    <div class="typing">Я вообще не умею программировать... но ради тебя пришлось ❤️</div>
+</div>
+
+<div id="screen3" class="center" style="display:none;">
+    <div class="heart"></div>
+    <h1 style="margin-top:180px;">Happy Valentine's Day</h1>
+</div>
+
+<script>
+function start(){
+    document.getElementById("screen1").style.display="none";
+    document.getElementById("screen2").style.display="block";
+
+    setTimeout(()=>{
+        document.getElementById("screen2").style.display="none";
+        document.getElementById("screen3").style.display="block";
+        rainHearts();
+    },4500);
+}
+
+function rainHearts(){
+    setInterval(()=>{
+        const heart=document.createElement("div");
+        heart.className="fall";
+        heart.innerHTML="❤";
+        heart.style.left=Math.random()*100+"vw";
+        heart.style.animationDuration=(Math.random()*3+2)+"s";
+        document.body.appendChild(heart);
+
+        setTimeout(()=>heart.remove(),5000);
+    },150);
+}
+</script>
+
+</body>
+</html>
