@@ -3,20 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Particle Heart</title>
+<title>Bear Sending Hearts</title>
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-    }
-    canvas {
-        display: block;
-    }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #ffe6f0;
+}
+canvas { display: block; }
 </style>
 </head>
 <body>
@@ -24,113 +18,141 @@
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const particles = [];
-const particleCount = 180; 
-const connectionDistance = 120;
+const bear = {
+  x: 150,
+  y: canvas.height - 250,
+  size: 100
+};
 
+const hearts = [];
+const heartCount = 60;
+const letters = [];
+const word = "I'm always here";
+let frame = 0;
+let kissHeart = null;
 
-function getHeartPoint(t, scale = 15) {
-    const x = scale * 16 * Math.pow(Math.sin(t), 3);
-    const y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    return { x, y };
+// Генерация сердечек
+function createHeart() {
+  hearts.push({
+    x: bear.x + 50,
+    y: bear.y - 50,
+    vx: Math.random() * 2 - 1,
+    vy: Math.random() * -3 - 2,
+    size: Math.random()*15+10,
+    color: `rgba(255,${Math.floor(Math.random()*100+100)},${Math.floor(Math.random()*100+100)},1)`
+  });
 }
 
-class Particle {
-    constructor() {
-        this.reset();
-    }
-
-    reset() {
-        const t = Math.random() * Math.PI * 2;
-        const heartPoint = getHeartPoint(t);
-
-        const spread = 30;
-        this.targetX = canvas.width / 2 + heartPoint.x + (Math.random() - 0.5) * spread;
-        this.targetY = canvas.height / 2 + heartPoint.y + (Math.random() - 0.5) * spread;
-
-        this.x = this.targetX + (Math.random() - 0.5) * 200;
-        this.y = this.targetY + (Math.random() - 0.5) * 200;
-        this.vx = 0;
-        this.vy = 0;
-        this.life = 1;
-        this.size = 2 + Math.random() * 2; 
-        this.glow = 4 + Math.random() * 2; 
-    }
-
-    update() {
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-
-        this.vx += dx * 0.00055; 
-        this.vy += dy * 0.00055;
-
-        this.vx *= 0.94;
-        this.vy *= 0.94;
-
-        this.x += this.vx;
-        this.y += this.vy;
-
-        this.life -= 0.002;
-        if (this.life <= 0) this.reset();
-    }
-
-    draw() {
-        ctx.fillStyle = `rgba(0, 200, 255, ${this.life * 0.6})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = `rgba(0, 200, 255, ${this.life * 0.2})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.glow, 0, Math.PI * 2);
-        ctx.fill();
-    }
+// Рисуем мишку
+function drawBear() {
+  const {x,y,size} = bear;
+  // тело
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(x,y,size,0,Math.PI*2);
+  ctx.fill();
+  // уши
+  ctx.beginPath();
+  ctx.arc(x-size*0.6, y-size*0.6, size*0.4,0,Math.PI*2);
+  ctx.arc(x+size*0.6, y-size*0.6, size*0.4,0,Math.PI*2);
+  ctx.fill();
+  // глаза
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.arc(x-size*0.3,y-size*0.2,10,0,Math.PI*2);
+  ctx.arc(x+size*0.3,y-size*0.2,10,0,Math.PI*2);
+  ctx.fill();
+  // нос
+  ctx.beginPath();
+  ctx.arc(x,y+10,15,0,Math.PI*2);
+  ctx.fill();
+  // рот (улыбка)
+  ctx.beginPath();
+  ctx.arc(x, y+20, 20, 0, Math.PI);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
-for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+// Обновление сердец
+function updateHearts() {
+  hearts.forEach((h,i)=>{
+    h.x += h.vx;
+    h.y += h.vy;
+    h.vy += 0.05; // гравитация
 
-function drawConnections() {
-    for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-            const dx = particles[i].x - particles[j].x;
-            const dy = particles[i].y - particles[j].y;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            if (distance < connectionDistance) {
-                const opacity = (1 - distance / connectionDistance) * 0.4 * Math.min(particles[i].life, particles[j].life);
-                ctx.strokeStyle = `rgba(0, 200, 255, ${opacity})`;
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(particles[i].x, particles[i].y);
-                ctx.lineTo(particles[j].x, particles[j].y);
-                ctx.stroke();
-            }
-        }
+    if(h.y < canvas.height/2 && frame>150){
+      // собираем в буквы
+      const idx = i%word.length;
+      const letterX = canvas.width/2 - (word.length*25) + idx*50 + Math.random()*10;
+      const letterY = canvas.height/2 + Math.random()*10;
+      letters.push({x:letterX,y:letterY,size:h.size,color:h.color,letter:word[idx]});
+      hearts.splice(i,1);
     }
+  });
+
+  // После того как все буквы собраны, запускаем поцелуй
+  if(letters.length >= word.length && !kissHeart){
+    kissHeart = {x:bear.x, y:bear.y - 50, vx:4, vy:-3, size:20, color:"rgba(255,100,150,1)"};
+  }
+
+  if(kissHeart){
+    kissHeart.x += kissHeart.vx;
+    kissHeart.y += kissHeart.vy;
+    kissHeart.vy += 0.05;
+  }
 }
 
-function animate() {
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
+// Рисуем сердца
+function drawHearts() {
+  hearts.forEach(h=>{
+    ctx.beginPath();
+    ctx.arc(h.x,h.y,h.size/2,0,Math.PI*2);
+    ctx.fillStyle = h.color;
+    ctx.fill();
+  });
+}
 
-    drawConnections();
+// Рисуем слово из сердец
+function drawLetters() {
+  letters.forEach(l=>{
+    ctx.fillStyle = l.color;
+    ctx.font = `${l.size}px Arial`;
+    ctx.fillText(l.letter,l.x,l.y);
+  });
+}
 
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
+// Рисуем воздушный поцелуй
+function drawKiss() {
+  if(kissHeart){
+    ctx.beginPath();
+    ctx.arc(kissHeart.x,kissHeart.y,kissHeart.size,0,Math.PI*2);
+    ctx.fillStyle = kissHeart.color;
+    ctx.fill();
+  }
+}
 
-    requestAnimationFrame(animate);
+// Анимация
+function animate(){
+  frame++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBear();
+  if(frame%5===0 && letters.length<word.length) createHeart();
+  updateHearts();
+  drawHearts();
+  drawLetters();
+  drawKiss();
+  requestAnimationFrame(animate);
 }
 
 animate();
 
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+window.addEventListener('resize',()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 });
 </script>
 </body>
