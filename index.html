@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Valentine Heart Explosion Ultra</title>
+<title>Galactic Heart Animation</title>
 <style>
 body {
   margin: 0;
   padding: 0;
-  background: #111;
   overflow: hidden;
+  background: #111;
   font-family: Arial, sans-serif;
 }
 
@@ -17,12 +17,11 @@ body {
   top: 50%;
   width: 100%;
   text-align: center;
-  font-size: 36px;
-  color: #ff7bac;
+  font-size: 40px;
+  color: #ffb6c1;
   opacity: 0;
   transform: translateY(-50%);
   letter-spacing: 2px;
-  transition: opacity 2s;
 }
 
 canvas {
@@ -32,130 +31,132 @@ canvas {
 </head>
 <body>
 <canvas id="canvas"></canvas>
-<div id="message">С Днём Святого Валентина! ❤️ От Кира</div>
+<div id="message">С Днём Святого Валентина!</div>
 
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let heartX = canvas.width / 2;
-let heartY = canvas.height / 2;
-let heartBeat = 0;
+let centerX = canvas.width / 2;
+let centerY = canvas.height / 2;
+let pulseTime = 0;
+
+const settings = {
+  numParticles: 5000,
+  pulseSpeed: 0.05,
+  scaleFactor: 15,
+  colorStart: [255,255,255],
+  colorEnd: [255,182,193],
+  sparkleChance: 0.05,
+  text: "С Днём Святого Валентина!",
+  textColor: "#ffb6c1"
+};
+
+let heartPoints = [];
 let particles = [];
 let trails = [];
-let exploded = false;
 
-// Функция для расчета точек сердца
-function heartPoint(t) {
-  return {
-    x: 16 * Math.pow(Math.sin(t), 3),
-    y: 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)
-  };
+// Генерация точек сердца
+function generateHeartShape() {
+  heartPoints = [];
+  const pulse = 1 + Math.sin(pulseTime) * 0.05;
+  const scale = settings.scaleFactor * pulse;
+  const steps = Math.max(40, settings.numParticles);
+
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const x = centerX + scale * 16 * Math.pow(Math.sin(t), 3);
+    const y = centerY - scale * (13 * Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t));
+    heartPoints.push({x, y});
+  }
 }
 
-// Создаем 4500 частиц для плотного сердца
-const NUM_PARTICLES = 4500;
-for (let i = 0; i < NUM_PARTICLES; i++) {
-  let t = Math.random() * Math.PI * 2;
-  let p = heartPoint(t);
-  particles.push({
-    x: heartX + p.x * 15,
-    y: heartY - p.y * 15,
-    vx: 0,
-    vy: 0,
-    size: Math.random() * 2 + 1,
-    color: "#ff4ca6",
-    sparkle: Math.random() > 0.95 // редкое мерцание
-  });
+// Создаем частицы
+function initParticles() {
+  particles = [];
+  trails = [];
+  for(let i = 0; i < heartPoints.length; i++) {
+    const p = heartPoints[i];
+    particles.push({
+      x: p.x,
+      y: p.y,
+      size: Math.random()*2 + 1,
+      color: settings.colorStart.slice(),
+      sparkle: Math.random() < settings.sparkleChance
+    });
+    trails.push([]);
+  }
 }
 
-// Массив следов
-for (let i = 0; i < NUM_PARTICLES; i++) {
-  trails.push([]);
+// Функция для плавного перехода цветов
+function lerpColor(c1, c2, t) {
+  return c1.map((v,i) => v + (c2[i]-v)*t);
 }
 
 // Основная анимация
 function animate() {
+  pulseTime += settings.pulseSpeed;
+  generateHeartShape();
+
   ctx.fillStyle = "rgba(17,17,17,0.25)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0,0,canvas.width, canvas.height);
 
-  if (!exploded) {
-    heartBeat += 0.05;
-    let scale = 1 + 0.1 * Math.sin(heartBeat);
+  particles.forEach((p, i) => {
+    const target = heartPoints[i % heartPoints.length];
+    const dx = target.x - p.x;
+    const dy = target.y - p.y;
+    p.x += dx * 0.1;
+    p.y += dy * 0.1;
 
-    particles.forEach(p => {
-      let dx = p.x - heartX;
-      let dy = p.y - heartY;
+    // Перелив цвета
+    const t = (Math.sin(pulseTime + i/100) + 1)/2;
+    const c = lerpColor(settings.colorStart, settings.colorEnd, t);
+    const colorStr = `rgb(${Math.floor(c[0])},${Math.floor(c[1])},${Math.floor(c[2])})`;
+    p.color = colorStr;
+
+    // Добавляем следы
+    trails[i].push({x: p.x, y: p.y, size: p.size, color: p.color, sparkle: p.sparkle});
+    if(trails[i].length > 10) trails[i].shift();
+
+    trails[i].forEach((t,j)=>{
       ctx.beginPath();
-      ctx.arc(heartX + dx*scale, heartY + dy*scale, p.size, 0, Math.PI*2);
-      ctx.fillStyle = p.color;
+      ctx.arc(t.x, t.y, t.size*(j/10), 0, Math.PI*2);
+      ctx.fillStyle = t.color;
+      ctx.globalAlpha = t.sparkle ? Math.random() : 1;
       ctx.fill();
+      ctx.globalAlpha = 1;
     });
-  } else {
-    particles.forEach((p, i) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.05; // гравитация
-      p.vx *= 0.99;
-      p.vy *= 0.99;
 
-      // Добавляем в следы
-      trails[i].push({x: p.x, y: p.y, size: p.size, color: p.color, sparkle: p.sparkle});
-      if (trails[i].length > 12) trails[i].shift();
-
-      // Рисуем следы
-      trails[i].forEach((t, j) => {
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, t.size * (j/12), 0, Math.PI*2);
-        ctx.fillStyle = t.color;
-        ctx.globalAlpha = t.sparkle ? Math.random() : 1;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      });
-
-      // Частица
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-      ctx.fillStyle = p.color;
-      ctx.fill();
-    });
-  }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+  });
 
   requestAnimationFrame(animate);
 }
 
-// Взрыв сердца через 4 секунды
+// Инициализация
+generateHeartShape();
+initParticles();
+
+// Появление текста
+const msg = document.getElementById('message');
 setTimeout(() => {
-  exploded = true;
-  particles.forEach(p => {
-    let angle = Math.random() * Math.PI * 2;
-    let speed = Math.random() * 15 + 2;
-    p.vx = Math.cos(angle) * speed;
-    p.vy = Math.sin(angle) * speed;
-  });
-
-  // Появление текста по буквам
-  const msg = document.getElementById('message');
   msg.style.opacity = 1;
-  const text = msg.innerText;
-  msg.innerHTML = "";
-  text.split("").forEach((c, i) => {
-    setTimeout(() => { msg.innerHTML += c; }, i*50);
-  });
-}, 4000);
+}, 1000);
 
-animate();
-
-// Ресайз окна
-window.addEventListener('resize', () => {
+// Ресайз
+window.addEventListener('resize', ()=>{
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  heartX = canvas.width / 2;
-  heartY = canvas.height / 2;
+  centerX = canvas.width / 2;
+  centerY = canvas.height / 2;
 });
+
+animate();
 </script>
 </body>
 </html>
