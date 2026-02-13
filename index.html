@@ -1,105 +1,125 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Для тебя ❤️</title>
+<title>для тебя</title>
 
 <style>
 html,body{
     margin:0;
-    padding:0;
-    background:#0d0d16;
+    background: radial-gradient(circle at center,#0f1020,#05060a);
     overflow:hidden;
-    font-family:Arial, Helvetica, sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 
 canvas{
-    position:absolute;
+    position:fixed;
     top:0;
     left:0;
 }
 
-#text{
+#msg{
     position:absolute;
     width:100%;
-    top:65%;
     text-align:center;
+    top:60%;
     color:white;
-    font-size:32px;
+    font-size:34px;
+    letter-spacing:2px;
     opacity:0;
-    transition:1.5s;
+    transition:2s;
 }
 
-.show{
-    opacity:1 !important;
+.show{opacity:1;}
+
+.sub{
+    font-size:18px;
+    opacity:.75;
+    margin-top:10px;
 }
 </style>
 </head>
-
 <body>
 
 <canvas id="c"></canvas>
-<div id="text">С Днём святого Валентина ❤️</div>
+
+<div id="msg">
+    С Днём Святого Валентина ❤️
+    <div class="sub">я правда старался ради тебя</div>
+</div>
 
 <script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
 
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    c.width=innerWidth;
+    c.height=innerHeight;
 }
 resize();
-window.onresize = resize;
+onresize=resize;
 
-let particles = [];
-let heart = [];
+const particles=[];
+const heartPoints=[];
 
-function heartShape(t){
+function heart(t){
     return {
-        x: 16 * Math.pow(Math.sin(t),3),
-        y: 13 * Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)
-    };
+        x:16*Math.pow(Math.sin(t),3),
+        y:13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)
+    }
 }
 
-for(let i=0;i<Math.PI*2;i+=0.05){
-    let pos = heartShape(i);
-    heart.push({
-        x: canvas.width/2 + pos.x*15,
-        y: canvas.height/2 - pos.y*15
+for(let i=0;i<Math.PI*2;i+=0.01){
+    let p=heart(i);
+    heartPoints.push({
+        x:c.width/2+p.x*20,
+        y:c.height/2-p.y*20
     });
 }
 
-for(let i=0;i<500;i++){
+for(let i=0;i<1400;i++){
+    let target=heartPoints[i%heartPoints.length];
     particles.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        tx: heart[i%heart.length].x,
-        ty: heart[i%heart.length].y,
-        size: Math.random()*2+1,
-        speed: Math.random()*0.02+0.01
+        x:Math.random()*c.width,
+        y:Math.random()*c.height,
+        tx:target.x,
+        ty:target.y,
+        size:Math.random()*1.7+0.3,
+        speed:Math.random()*0.015+0.01,
+        life:Math.random()*100
     });
 }
 
-let phase = 0;
+let phase=0;
+let beat=0;
 
 function draw(){
-    ctx.fillStyle="rgba(13,13,22,0.25)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="rgba(5,6,10,0.2)";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    beat+=0.05;
+    let scale=1+Math.sin(beat)*0.04;
 
     particles.forEach(p=>{
         if(phase==0){
-            p.x += (p.tx-p.x)*p.speed;
-            p.y += (p.ty-p.y)*p.speed;
-        }
-        else{
-            p.y += 2+Math.random()*2;
-            p.x += Math.sin(p.y*0.05);
+            let dx=(p.tx-c.width/2)*scale+c.width/2-p.x;
+            let dy=(p.ty-c.height/2)*scale+c.height/2-p.y;
+            p.x+=dx*p.speed;
+            p.y+=dy*p.speed;
+        }else{
+            p.y+=1.2+p.size;
+            p.x+=Math.sin(p.y*0.03)*0.7;
         }
 
+        let glow=6*p.size;
+        let g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,glow);
+        g.addColorStop(0,"rgba(255,120,160,1)");
+        g.addColorStop(1,"rgba(255,120,160,0)");
+
+        ctx.fillStyle=g;
         ctx.beginPath();
-        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-        ctx.fillStyle="rgb(255,80,120)";
+        ctx.arc(p.x,p.y,glow,0,Math.PI*2);
         ctx.fill();
     });
 
@@ -108,10 +128,8 @@ function draw(){
 
 draw();
 
-setTimeout(()=>{
-    phase=1;
-    document.getElementById("text").classList.add("show");
-},7000);
+setTimeout(()=>phase=1,9000);
+setTimeout(()=>document.getElementById("msg").classList.add("show"),10500);
 </script>
 
 </body>
